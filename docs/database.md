@@ -91,9 +91,36 @@ Politicas a definir:
 
 ## Pendiente
 
-- Crear proyecto Supabase.
-- Crear migraciones.
-- Definir enums.
-- Definir indices.
+- Aplicar la migracion en el proyecto remoto de Supabase.
 - Probar RLS con usuarios reales.
 - Documentar variables de entorno.
+
+## Migracion inicial
+
+Archivo:
+
+```txt
+supabase/migrations/202607040001_initial_multiplayer_schema.sql
+```
+
+La migracion crea:
+
+- Enums `room_status`, `player_seat`, `match_status` y `game_event_type`.
+- Tablas `profiles`, `rooms`, `room_players`, `matches` y `game_events`.
+- Indices para lobby, jugadores por sala, partidas y eventos por partida.
+- Trigger `set_updated_at` para `profiles` y `rooms`.
+- RLS en todas las tablas.
+
+## Politicas RLS iniciales
+
+Estas politicas son una primera version segura para avanzar:
+
+- Los perfiles publicos se pueden leer.
+- Cada usuario puede crear y actualizar su propio perfil.
+- Las salas se pueden leer para permitir lobby.
+- Solo el host autenticado puede crear, actualizar o borrar su sala.
+- Cada usuario puede unirse a una sala como si mismo y actualizar su propio ready/connected state.
+- Las partidas y eventos se pueden leer.
+- Solo jugadores de una partida pueden insertar eventos de juego.
+
+Estas reglas se deben endurecer cuando implementemos Auth, matchmaking y reglas finales de partida.

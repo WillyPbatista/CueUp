@@ -1,0 +1,2 @@
+-- Optional local seed data for CueUp.
+-- This file intentionally stays empty until auth test users exist.

@@ -130,3 +130,34 @@ Este archivo es la bitacora del proyecto. Cada tarea debe dejar una nota corta c
 ### Siguiente duda
 
 - Como definir RLS para que usuarios anonimos o autenticados puedan ver/crear salas de forma segura.
+
+## 2026-07-04 - 05.02 Database Design
+
+### Aprendi
+
+- Una tabla guarda una entidad principal del dominio, por ejemplo `rooms` para salas y `matches` para partidas.
+- Una relacion conecta tablas con foreign keys. Ejemplo: `room_players.room_id` apunta a `rooms.id`.
+- Un enum limita una columna a valores conocidos, como `waiting`, `playing` o `finished`.
+- Una migracion es un archivo SQL versionado que permite recrear el schema y entender como cambio la base de datos.
+- RLS significa Row Level Security. Aunque una tabla exista, las politicas deciden que filas puede leer o modificar cada usuario.
+- `jsonb` sirve para eventos flexibles como tiros, bolas metidas o snapshots parciales sin cambiar el schema por cada detalle del juego.
+
+### Por que no toda la fisica vive en columnas
+
+- La fisica cambia muchas veces por segundo y seria muy costoso escribir cada posicion de cada bola como columnas normales.
+- Muchas propiedades del juego son temporales y solo importan durante la simulacion local.
+- Para multiplayer conviene guardar eventos importantes, como `shot`, `scratch` o `ball_pocketed`, y reconstruir estado desde esos eventos.
+- Si necesitamos reconexion, podemos guardar snapshots en JSONB mas adelante sin volver rigido el modelo.
+
+### Decisiones
+
+- `profiles` se conecta con `auth.users`.
+- `rooms` representa el lobby previo a la partida.
+- `room_players` separa los jugadores conectados de la sala para soportar ready state y reconnect.
+- `matches` representa la partida formal.
+- `game_events` guarda eventos importantes de gameplay como historial sincronizable.
+- La primera version de RLS permite leer lobby y eventos, pero exige usuario autenticado para crear salas, unirse y escribir eventos.
+
+### Siguiente duda
+
+- Como aplicar esta migracion con Supabase CLI en vez de pegar SQL manualmente en el dashboard.
