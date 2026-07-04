@@ -1,4 +1,9 @@
-import type { ChangeEvent, InputHTMLAttributes, ReactNode } from 'react';
+import {
+  forwardRef,
+  type ChangeEvent,
+  type InputHTMLAttributes,
+  type ReactNode,
+} from 'react';
 
 type InputSize = 'small' | 'medium' | 'large';
 type InputVariant = 'default' | 'error';
@@ -20,22 +25,25 @@ interface InputProps extends Omit<
   onChange?: (value: string, event: ChangeEvent<HTMLInputElement>) => void;
 }
 
-export function Input({
-  id,
-  label,
-  helperText,
-  error,
-  size = 'medium',
-  variant = 'default',
-  fullWidth = false,
-  disabled = false,
-  className = '',
-  inputClassName = '',
-  leftIcon,
-  rightIcon,
-  onChange,
-  ...props
-}: InputProps) {
+export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
+  {
+    id,
+    label,
+    helperText,
+    error,
+    size = 'medium',
+    variant = 'default',
+    fullWidth = false,
+    disabled = false,
+    className = '',
+    inputClassName = '',
+    leftIcon,
+    rightIcon,
+    onChange,
+    ...props
+  },
+  ref
+) {
   const inputId = id ?? props.name;
   const state = error ? 'error' : variant;
   const supportText = error ?? helperText;
@@ -55,6 +63,7 @@ export function Input({
 
         <input
           {...props}
+          ref={ref}
           id={inputId}
           disabled={disabled}
           onChange={(event) => onChange?.(event.target.value, event)}
@@ -75,7 +84,7 @@ export function Input({
       ) : null}
     </label>
   );
-}
+});
 
 function getRootClass(fullWidth: boolean, className: string) {
   return [

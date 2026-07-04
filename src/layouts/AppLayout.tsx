@@ -5,6 +5,7 @@ const navigationItems = [
   { label: 'Lobby', to: '/lobby' },
   { label: 'Game', to: '/game/demo-match' },
   { label: 'Settings', to: '/settings' },
+  { label: 'Playground', to: '/playground' },
 ];
 
 export function AppLayout() {

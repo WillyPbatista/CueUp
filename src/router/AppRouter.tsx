@@ -4,6 +4,7 @@ import { GamePage } from '../pages/GamePage';
 import { HomePage } from '../pages/HomePage';
 import { LobbyPage } from '../pages/LobbyPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
+import { Playground } from '../pages/Playground';
 import { RoomPage } from '../pages/RoomPage';
 import { SettingsPage } from '../pages/SettingsPage';
 
@@ -31,6 +32,10 @@ export const router = createBrowserRouter([
       {
         path: 'settings',
         element: <SettingsPage />,
+      },
+      {
+        path: 'playground',
+        element: <Playground />,
       },
       {
         path: '*',
