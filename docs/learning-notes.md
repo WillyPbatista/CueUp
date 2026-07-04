@@ -55,3 +55,21 @@ Este archivo es la bitacora del proyecto. Cada tarea debe dejar una nota corta c
 
 - ...
 ```
+
+## 2026-07-04 - 02.03 Routing
+
+### Aprendi
+
+- Una pagina representa una pantalla completa conectada a una ruta.
+- Un componente compartido representa una pieza reusable de UI, como Button, Card, Badge o Input.
+- El layout base permite compartir navegacion y estructura entre rutas.
+
+### Decisiones
+
+- `App.tsx` ahora solo monta `RouterProvider`.
+- Las rutas viven en `src/router/AppRouter.tsx`.
+- Las pantallas iniciales viven en `src/pages/`.
+
+### Siguiente duda
+
+- Como proteger rutas cuando agreguemos Supabase Auth.
