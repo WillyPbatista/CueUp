@@ -1,8 +1,41 @@
+import { type FormEvent, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Badge } from '../components/badge';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
+import { Input } from '../components/input';
+import { usePlayerProfile } from '../features/auth/usePlayerProfile';
 
 export function HomePage() {
+  const navigate = useNavigate();
+  const { errorMessage, isLoading, isReady, profile, registerPlayer, signOut } =
+    usePlayerProfile();
+  const [username, setUsername] = useState('');
+  const [formError, setFormError] = useState<string | null>(null);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (username.trim().length < 3) {
+      setFormError('El nombre debe tener al menos 3 caracteres.');
+      return;
+    }
+
+    if (username.trim().length > 24) {
+      setFormError('El nombre debe tener 24 caracteres o menos.');
+      return;
+    }
+
+    setFormError(null);
+
+    try {
+      await registerPlayer(username);
+      navigate('/lobby');
+    } catch {
+      // The hook owns the user-facing error message.
+    }
+  }
+
   return (
     <div className="flex min-h-[calc(100vh-9rem)] flex-col items-center justify-center gap-8 bg-[var(--bg-primary)] text-[var(--text-primary)]">
       <header className="relative flex flex-col items-center text-center">
@@ -31,12 +64,48 @@ export function HomePage() {
             <Badge variant="gold">2 jugadores</Badge>
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <Button fullWidth>Create Room</Button>
-            <Button variant="accent" fullWidth>
-              Join Room
-            </Button>
-          </div>
+          {isReady && profile ? (
+            <div className="flex flex-col gap-4">
+              <div className="rounded-md border border-[var(--border)] bg-[rgba(255,255,255,0.04)] p-4">
+                <p className="text-sm text-[var(--text-muted)]">
+                  Jugador listo
+                </p>
+                <p className="text-2xl font-bold text-[var(--color-gold-soft)]">
+                  {profile.username}
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <Button onClick={() => navigate('/lobby')} fullWidth>
+                  Enter Lobby
+                </Button>
+                <Button variant="outline" onClick={signOut} fullWidth>
+                  Change Player
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+              <Input
+                label="Nombre de jugador"
+                placeholder="Jugador 1"
+                value={username}
+                onChange={setUsername}
+                error={formError ?? errorMessage ?? undefined}
+                disabled={isLoading}
+                fullWidth
+              />
+
+              <Button type="submit" loading={isLoading} fullWidth>
+                Save Player
+              </Button>
+
+              <p className="text-sm leading-6 text-[var(--text-muted)]">
+                Usaremos una sesion anonima de Supabase para asociar tus salas y
+                partidas a este nombre. No necesitas email ni password todavia.
+              </p>
+            </form>
+          )}
         </div>
       </Card>
     </div>

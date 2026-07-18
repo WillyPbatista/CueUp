@@ -4,7 +4,6 @@ const navigationItems = [
   { label: 'Home', to: '/' },
   { label: 'Lobby', to: '/lobby' },
   { label: 'Game', to: '/game/demo-match' },
-  { label: 'Settings', to: '/settings' },
   { label: 'Playground', to: '/playground' },
 ];
 

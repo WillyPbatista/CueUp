@@ -161,3 +161,54 @@ Este archivo es la bitacora del proyecto. Cada tarea debe dejar una nota corta c
 ### Siguiente duda
 
 - Como aplicar esta migracion con Supabase CLI en vez de pegar SQL manualmente en el dashboard.
+
+## 2026-07-04 - Auth minima para lobby
+
+### Aprendi
+
+- Para crear salas con RLS necesitamos un `auth.uid()`, incluso si todavia no queremos email/password.
+- Supabase puede usar sesiones anonimas para identificar un jugador sin pedir registro completo.
+- El `profile` es la parte publica del jugador: username, avatar y datos que la app puede mostrar.
+- La sesion anonima vive en Supabase Auth; el nombre del jugador vive en `profiles`.
+- `HomePage` es mejor lugar que `SettingsPage` para pedir el username inicial, porque es el primer bloqueo antes de entrar al lobby.
+
+### Decisiones
+
+- Se creo `src/features/auth/` para separar la logica de auth de las paginas.
+- `authService.ts` habla con Supabase.
+- `usePlayerProfile.ts` adapta esa logica a React.
+- `HomePage` permite guardar/cambiar jugador y navegar al lobby.
+- Se quito `Settings` del router porque todavia no aporta una configuracion real.
+
+### Importante
+
+- En Supabase Dashboard debe estar habilitada la opcion de anonymous sign-ins.
+- Si anonymous auth no esta habilitado, la UI mostrara un error indicando que debe activarse.
+
+### Siguiente duda
+
+- Como proteger `LobbyPage` para que redirija a Home si no existe `profile`.
+
+## 2026-07-18 - 06.01 Realtime Lobby
+
+### Aprendi
+
+- Leer de base de datos es traer un snapshot actual: por ejemplo `listWaitingRooms()` o `getRoomPlayers(roomId)`.
+- Suscribirse a cambios realtime es escuchar eventos futuros: cuando otra pestana crea una sala o un jugador entra, Supabase avisa y la UI refresca.
+- `rooms` representa la sala visible en el lobby.
+- `room_players` representa quien esta dentro de una sala, que asiento ocupa y si esta listo.
+- Para entrar a una sala se inserta una fila en `room_players`.
+- Para salir de una sala se elimina la fila de ese jugador en `room_players`.
+- Para marcar ready se actualiza `room_players.ready` del jugador actual.
+
+### Decisiones
+
+- `LobbyPage` usa `useLobby` y no habla directamente con Supabase.
+- `RoomPage` carga jugadores con `getRoomPlayers(roomId)` y se suscribe a cambios de `room_players`.
+- El boton `Back to Lobby` llama `backToLobby(roomId, userId)` antes de navegar.
+- El boton `Ready` alterna entre ready y not ready con `setCurrentPlayerReady`.
+- La sala se limita a 2 jugadores usando lectura previa de asientos y constraints de base de datos.
+
+### Siguiente duda
+
+- Que debe ocurrir cuando ambos jugadores estan ready: crear `matches`, cambiar `rooms.status` a `playing` y navegar a `/game/:matchId`.

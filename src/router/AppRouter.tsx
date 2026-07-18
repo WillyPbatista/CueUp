@@ -6,7 +6,6 @@ import { LobbyPage } from '../pages/LobbyPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { Playground } from '../pages/Playground';
 import { RoomPage } from '../pages/RoomPage';
-import { SettingsPage } from '../pages/SettingsPage';
 
 export const router = createBrowserRouter([
   {
@@ -28,10 +27,6 @@ export const router = createBrowserRouter([
       {
         path: 'game/:matchId',
         element: <GamePage />,
-      },
-      {
-        path: 'settings',
-        element: <SettingsPage />,
       },
       {
         path: 'playground',
