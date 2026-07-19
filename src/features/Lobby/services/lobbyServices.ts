@@ -26,6 +26,15 @@ interface RoomSeatRow {
   seat: 'player_1' | 'player_2';
 }
 
+interface MatchRow {
+  id: string;
+  room_id: string;
+  player_1_id: string;
+  player_2_id: string;
+  status: 'playing' | 'finished' | 'abandoned';
+  started_at: string;
+}
+
 export interface RoomPlayerRow {
   id: string;
   user_id: string;
@@ -67,6 +76,15 @@ export interface RoomPresencePlayer {
   onlineAt: string;
 }
 
+export interface Match {
+  id: string;
+  roomId: string;
+  player1Id: string;
+  player2Id: string;
+  status: MatchRow['status'];
+  startedAt: string;
+}
+
 export type RealtimeConnectionStatus =
   'connecting' | 'subscribed' | 'timed_out' | 'closed' | 'channel_error';
 
@@ -93,6 +111,30 @@ export async function listWaitingRooms() {
   }
 
   return data.map(mapRoom);
+}
+
+export async function getRoomById(roomId: string) {
+  const { data, error } = await supabase
+    .from('rooms')
+    .select(
+      `
+        id,
+        code,
+        status,
+        host_id,
+        created_at,
+        updated_at,
+        room_players(id)
+      `
+    )
+    .eq('id', roomId)
+    .single<RoomRow>();
+
+  if (error) {
+    throw error;
+  }
+
+  return mapRoom(data);
 }
 
 export async function createRoom(hostId: string, requestedCode?: string) {
@@ -141,6 +183,29 @@ export function subscribeToRooms(onChange: () => void): RealtimeChannel {
     )
     .subscribe();
 }
+
+export function subscribeToRoom(
+  roomId: string,
+  onChange: () => void,
+  onStatusChange?: (status: RealtimeConnectionStatus) => void
+): RealtimeChannel {
+  return supabase
+    .channel(`room:${roomId}:state`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        filter: `id=eq.${roomId}`,
+        schema: 'public',
+        table: 'rooms',
+      },
+      onChange
+    )
+    .subscribe((status) => {
+      onStatusChange?.(mapRealtimeStatus(status));
+    });
+}
+
 export async function getRoomPlayers(roomId: string) {
   const { data, error } = await supabase
     .from('room_players')
@@ -315,8 +380,77 @@ export async function setRoomPlayerConnected(
   }
 }
 
+export async function getMatchByRoomId(roomId: string) {
+  const { data, error } = await supabase
+    .from('matches')
+    .select('id, room_id, player_1_id, player_2_id, status, started_at')
+    .eq('room_id', roomId)
+    .maybeSingle<MatchRow>();
+
+  if (error) {
+    throw error;
+  }
+
+  return data ? mapMatch(data) : null;
+}
+
 export function normalizeRoomCode(code: string) {
   return code.trim().replace(/\s+/g, '-').toUpperCase();
+}
+
+export async function startMatchFromRoom(roomId: string) {
+  const players = await getRoomPlayers(roomId);
+  const playerOne = players.find((player) => player.seat === 'player_1');
+  const playerTwo = players.find((player) => player.seat === 'player_2');
+
+  if (!playerOne || !playerTwo) {
+    throw new Error('Room needs exactly 2 players before starting a match.');
+  }
+
+  if (!playerOne.ready || !playerTwo.ready) {
+    throw new Error('Both players must be ready before starting a match.');
+  }
+
+  const { data: existingMatch, error: existingMatchError } = await supabase
+    .from('matches')
+    .select('id, room_id, player_1_id, player_2_id, status, started_at')
+    .eq('room_id', roomId)
+    .maybeSingle<MatchRow>();
+
+  if (existingMatchError) {
+    throw existingMatchError;
+  }
+
+  if (existingMatch) {
+    await markRoomAsPlaying(roomId);
+    return mapMatch(existingMatch);
+  }
+
+  const { data: match, error: matchError } = await supabase
+    .from('matches')
+    .insert({
+      player_1_id: playerOne.userId,
+      player_2_id: playerTwo.userId,
+      room_id: roomId,
+    })
+    .select('id, room_id, player_1_id, player_2_id, status, started_at')
+    .single<MatchRow>();
+
+  if (matchError) {
+    if (isUniqueRoomMatchError(matchError)) {
+      const currentMatch = await getMatchByRoomId(roomId);
+
+      if (currentMatch) {
+        return currentMatch;
+      }
+    }
+
+    throw matchError;
+  }
+
+  await markRoomAsPlaying(roomId);
+
+  return mapMatch(match);
 }
 
 function createRoomCode() {
@@ -346,6 +480,28 @@ function mapRoomPlayer(row: RoomPlayerRow): RoomPlayer {
     connected: row.connected,
     joinedAt: row.joined_at,
   };
+}
+
+function mapMatch(row: MatchRow): Match {
+  return {
+    id: row.id,
+    player1Id: row.player_1_id,
+    player2Id: row.player_2_id,
+    roomId: row.room_id,
+    startedAt: row.started_at,
+    status: row.status,
+  };
+}
+
+async function markRoomAsPlaying(roomId: string) {
+  const { error } = await supabase
+    .from('rooms')
+    .update({ status: 'playing' })
+    .eq('id', roomId);
+
+  if (error) {
+    throw error;
+  }
 }
 
 function mapRoomReadyStatus(players: RoomPlayer[]): RoomReadyStatus {
@@ -382,4 +538,12 @@ function mapRealtimeStatus(status: string): RealtimeConnectionStatus {
   }
 
   return 'connecting';
+}
+
+function isUniqueRoomMatchError(error: { code?: string; message?: string }) {
+  return (
+    error.code === '23505' ||
+    error.message?.includes('matches_room_id_key') ||
+    error.message?.toLowerCase().includes('duplicate')
+  );
 }

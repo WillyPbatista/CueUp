@@ -67,7 +67,7 @@ Cada modulo debe terminar con:
 - [x] Sincronizar ready state.
 - [ ] Manejar desconexion.
 - [ ] Manejar reconexion.
-- [ ] Crear partida desde sala ready.
+- [x] Crear partida desde sala ready.
 
 ## 07. Phaser
 
@@ -127,4 +127,4 @@ Cada modulo debe terminar con:
 
 Estamos cerrando `06.01`: lobby realtime con salas, ready state y presencia entre dos navegadores.
 
-La siguiente tarea recomendada es `06.02-start-match-from-room.md`: convertir una sala con 2 jugadores ready en una fila `matches`, cambiar `rooms.status` a `playing` y navegar ambos clientes a `/game/:matchId`. Despues de eso conviene entrar a `07.01-phaser-introduction.md`, porque Phaser ya tendra una partida real desde la cual montarse.
+La siguiente tarea recomendada es `07.01-phaser-introduction.md`: montar Phaser en `/game/:matchId` usando una partida real creada desde el lobby. La base multiplayer previa ya existe: sala, ready state, presencia y transicion a match.

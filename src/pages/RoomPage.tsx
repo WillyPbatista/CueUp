@@ -13,8 +13,11 @@ export function RoomPage() {
   const { profile } = usePlayerProfile();
   const {
     backToLobby,
+    currentRoom,
     leavingRoom,
     loadRoomPlayers,
+    loadRoomState,
+    roomMatch,
     roomPlayers,
     roomPlayersError,
     roomPlayersLoading,
@@ -24,6 +27,9 @@ export function RoomPage() {
     roomReadyStatus,
     setCurrentPlayerConnected,
     setCurrentPlayerReady,
+    startCurrentRoomMatch,
+    startingMatch,
+    subscribeToLobbyRoomState,
     subscribeToLobbyRoomPresence,
     subscribeToLobbyRoomPlayers,
     updatingReady,
@@ -42,6 +48,7 @@ export function RoomPage() {
   const playerCount = roomReadyStatus?.playerCount ?? roomPlayers.length;
   const allPlayersReady =
     roomReadyStatus?.allReady ?? (isRoomFull && readyCount === 2);
+  const isHost = currentRoom?.hostId === profileId;
   const onlineUserIds = new Set(
     roomPresencePlayers.map((player) => player.userId)
   );
@@ -52,13 +59,30 @@ export function RoomPage() {
     }
 
     loadRoomPlayers(roomId);
+    loadRoomState(roomId);
 
-    const channel = subscribeToLobbyRoomPlayers(roomId);
+    const playersChannel = subscribeToLobbyRoomPlayers(roomId);
+    const roomChannel = subscribeToLobbyRoomState(roomId);
 
     return () => {
-      channel.unsubscribe();
+      playersChannel.unsubscribe();
+      roomChannel.unsubscribe();
     };
-  }, [loadRoomPlayers, roomId, subscribeToLobbyRoomPlayers]);
+  }, [
+    loadRoomPlayers,
+    loadRoomState,
+    roomId,
+    subscribeToLobbyRoomPlayers,
+    subscribeToLobbyRoomState,
+  ]);
+
+  useEffect(() => {
+    if (!roomMatch) {
+      return;
+    }
+
+    navigate(`/game/${roomMatch.id}`);
+  }, [navigate, roomMatch]);
 
   useEffect(() => {
     if (!roomId || !profileId) {
@@ -125,6 +149,19 @@ export function RoomPage() {
     }
   }
 
+  async function handleStartMatch() {
+    if (!roomId || !allPlayersReady || !isHost) {
+      return;
+    }
+
+    try {
+      const match = await startCurrentRoomMatch(roomId);
+      navigate(`/game/${match.id}`);
+    } catch {
+      // useLobby owns the user-facing error message.
+    }
+  }
+
   return (
     <Card
       eyebrow="Room"
@@ -158,6 +195,7 @@ export function RoomPage() {
           {currentPlayer ? (
             <Badge>Tu asiento: {formatSeat(currentPlayer.seat)}</Badge>
           ) : null}
+          {currentRoom ? <Badge>Sala {currentRoom.status}</Badge> : null}
         </div>
       }
     >
@@ -209,6 +247,15 @@ export function RoomPage() {
             fullWidth
           >
             {currentPlayer?.ready ? 'Cancel Ready' : 'Ready'}
+          </Button>
+          <Button
+            disabled={!isHost || !allPlayersReady || startingMatch}
+            loading={startingMatch}
+            onClick={handleStartMatch}
+            variant="accent"
+            fullWidth
+          >
+            Start Match
           </Button>
           <Button
             disabled={leavingRoom}

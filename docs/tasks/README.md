@@ -13,9 +13,9 @@ Esta carpeta convierte el roadmap de CueUp en una guia de trabajo. Cada archivo 
 
 ## Estado
 
-Estamos cerrando el Modulo 6 con lobby realtime, ready state y presencia online/offline.
+Estamos cerrando el Modulo 6 con lobby realtime, ready state, presencia online/offline y creacion de partida desde sala lista.
 
-Siguiente tarea recomendada: [06.02-start-match-from-room.md](06.02-start-match-from-room.md).
+Siguiente tarea recomendada: [07.01-phaser-introduction.md](07.01-phaser-introduction.md).
 
 ## Indice
 

@@ -239,3 +239,24 @@ Este archivo es la bitacora del proyecto. Cada tarea debe dejar una nota corta c
 ### Siguiente duda
 
 - Decidir si `connected` debe quedarse como estado persistido o si basta con Presence y una columna `last_seen_at`.
+
+## 2026-07-19 - 06.02 Start match from room
+
+### Aprendi
+
+- `rooms` y `matches` no representan lo mismo: la room es la sala de espera, el match es la partida real.
+- Una transicion multiplayer debe validar el estado actual antes de escribir: 2 jugadores, ambos ready y seats definidos.
+- La idempotencia evita bugs cuando dos acciones llegan casi al mismo tiempo. En CueUp, `matches.room_id unique` evita duplicados.
+- El cliente no necesita escuchar `matches` todavia: puede escuchar `rooms.status = playing`, leer el match por `room_id` y navegar.
+- RLS valida que solo el host pueda crear el match porque la policy compara `rooms.host_id` con `auth.uid()`.
+
+### Decisiones
+
+- `startMatchFromRoom(roomId)` no recibe `player1Id`, `player2Id` ni `hostId`; los calcula desde la base de datos.
+- `RoomPage` muestra `Start Match` solo cuando la sala esta completa, ambos estan ready y el usuario actual es host.
+- Si el match ya existe, el service lo devuelve en vez de intentar crear otro.
+- Ambos navegadores navegan a `/game/:matchId` cuando `roomMatch` aparece en el hook.
+
+### Siguiente duda
+
+- Si el inicio de partida debe hacerse con una funcion SQL/RPC para que insertar match y cambiar room a `playing` sea una transaccion atomica.
