@@ -61,12 +61,13 @@ Cada modulo debe terminar con:
 
 ## 06. Multiplayer
 
-- [ ] Crear lobby realtime.
-- [ ] Crear y unirse a salas.
-- [ ] Sincronizar presencia.
-- [ ] Sincronizar ready state.
+- [x] Crear lobby realtime.
+- [x] Crear y unirse a salas.
+- [x] Sincronizar presencia.
+- [x] Sincronizar ready state.
 - [ ] Manejar desconexion.
 - [ ] Manejar reconexion.
+- [ ] Crear partida desde sala ready.
 
 ## 07. Phaser
 
@@ -124,6 +125,6 @@ Cada modulo debe terminar con:
 
 ## Por donde vamos exactamente
 
-Estamos al final del Modulo 1 y entrando al Modulo 2.
+Estamos cerrando `06.01`: lobby realtime con salas, ready state y presencia entre dos navegadores.
 
-La foundation tecnica principal ya existe. El siguiente paso recomendado es `02.01-react-components.md`: crear los primeros componentes reutilizables y luego pasar a rutas y paginas. Despues de eso conviene conectar Supabase antes de tocar Phaser, porque el lobby multiplayer sera la columna vertebral del juego.
+La siguiente tarea recomendada es `06.02-start-match-from-room.md`: convertir una sala con 2 jugadores ready en una fila `matches`, cambiar `rooms.status` a `playing` y navegar ambos clientes a `/game/:matchId`. Despues de eso conviene entrar a `07.01-phaser-introduction.md`, porque Phaser ya tendra una partida real desde la cual montarse.

@@ -18,17 +18,33 @@ export function RoomPage() {
     roomPlayers,
     roomPlayersError,
     roomPlayersLoading,
+    roomPlayersRealtimeStatus,
+    roomPresencePlayers,
+    roomPresenceStatus,
+    roomReadyStatus,
+    setCurrentPlayerConnected,
     setCurrentPlayerReady,
+    subscribeToLobbyRoomPresence,
     subscribeToLobbyRoomPlayers,
     updatingReady,
   } = useLobby();
 
+  const profileId = profile?.id;
   const playerOne = roomPlayers.find((player) => player.seat === 'player_1');
   const playerTwo = roomPlayers.find((player) => player.seat === 'player_2');
   const currentPlayer = roomPlayers.find(
-    (player) => player.userId === profile?.id
+    (player) => player.userId === profileId
   );
   const isRoomFull = roomPlayers.length >= 2;
+  const readyCount =
+    roomReadyStatus?.readyCount ??
+    roomPlayers.filter((player) => player.ready).length;
+  const playerCount = roomReadyStatus?.playerCount ?? roomPlayers.length;
+  const allPlayersReady =
+    roomReadyStatus?.allReady ?? (isRoomFull && readyCount === 2);
+  const onlineUserIds = new Set(
+    roomPresencePlayers.map((player) => player.userId)
+  );
 
   useEffect(() => {
     if (!roomId) {
@@ -43,6 +59,30 @@ export function RoomPage() {
       channel.unsubscribe();
     };
   }, [loadRoomPlayers, roomId, subscribeToLobbyRoomPlayers]);
+
+  useEffect(() => {
+    if (!roomId || !profileId) {
+      return;
+    }
+
+    const channel = subscribeToLobbyRoomPresence(roomId, profileId);
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [profileId, roomId, subscribeToLobbyRoomPresence]);
+
+  useEffect(() => {
+    if (!roomId || !profileId) {
+      return;
+    }
+
+    void setCurrentPlayerConnected(roomId, profileId, true);
+
+    return () => {
+      void setCurrentPlayerConnected(roomId, profileId, false);
+    };
+  }, [profileId, roomId, setCurrentPlayerConnected]);
 
   if (!roomId) {
     return (
@@ -60,13 +100,13 @@ export function RoomPage() {
   }
 
   async function handleBackToLobby() {
-    if (!roomId || !profile) {
+    if (!roomId || !profileId) {
       navigate('/lobby');
       return;
     }
 
     try {
-      await backToLobby(roomId, profile.id);
+      await backToLobby(roomId, profileId);
       navigate('/lobby');
     } catch {
       // useLobby owns the user-facing error message.
@@ -74,12 +114,12 @@ export function RoomPage() {
   }
 
   async function handleReadyToggle() {
-    if (!roomId || !profile || !currentPlayer) {
+    if (!roomId || !profileId || !currentPlayer) {
       return;
     }
 
     try {
-      await setCurrentPlayerReady(roomId, profile.id, !currentPlayer.ready);
+      await setCurrentPlayerReady(roomId, profileId, !currentPlayer.ready);
     } catch {
       // useLobby owns the user-facing error message.
     }
@@ -96,6 +136,25 @@ export function RoomPage() {
             {isRoomFull ? 'Ready for match' : 'Waiting'}
           </Badge>
           <Badge variant="gold">{roomPlayers.length}/2 players</Badge>
+          <Badge variant={allPlayersReady ? 'success' : 'warning'}>
+            Ready {readyCount}/{Math.max(playerCount, 2)}
+          </Badge>
+          <Badge
+            variant={
+              roomPlayersRealtimeStatus === 'subscribed' &&
+              roomPresenceStatus === 'subscribed'
+                ? 'success'
+                : 'warning'
+            }
+            dot
+          >
+            Realtime{' '}
+            {formatRealtimeStatus(
+              roomPlayersRealtimeStatus === 'subscribed'
+                ? roomPresenceStatus
+                : roomPlayersRealtimeStatus
+            )}
+          </Badge>
           {currentPlayer ? (
             <Badge>Tu asiento: {formatSeat(currentPlayer.seat)}</Badge>
           ) : null}
@@ -115,17 +174,30 @@ export function RoomPage() {
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
-            <PlayerSeatCard player={playerOne} seat="player_1" />
-            <PlayerSeatCard player={playerTwo} seat="player_2" />
+            <PlayerSeatCard
+              player={playerOne}
+              seat="player_1"
+              online={playerOne ? onlineUserIds.has(playerOne.userId) : false}
+            />
+            <PlayerSeatCard
+              player={playerTwo}
+              seat="player_2"
+              online={playerTwo ? onlineUserIds.has(playerTwo.userId) : false}
+            />
           </div>
         )}
 
         <div className="rounded-md border border-[var(--border)] bg-[rgba(255,255,255,0.04)] p-4">
           <p className="text-xs uppercase tracking-wide text-[var(--text-muted)]">
-            Room id
+            Estado ready
           </p>
-          <p className="break-all text-sm text-[var(--color-gold-soft)]">
-            {roomId}
+          <p className="text-sm text-[var(--color-gold-soft)]">
+            {allPlayersReady
+              ? 'Los dos jugadores estan listos para iniciar.'
+              : 'Cuando ambos jugadores marquen ready, podremos crear la partida.'}
+          </p>
+          <p className="mt-2 break-all text-xs text-[var(--text-muted)]">
+            Room id: {roomId}
           </p>
         </div>
 
@@ -154,9 +226,11 @@ export function RoomPage() {
 }
 
 function PlayerSeatCard({
+  online,
   player,
   seat,
 }: {
+  online: boolean;
   player?: RoomPlayer;
   seat: RoomPlayer['seat'];
 }) {
@@ -182,7 +256,9 @@ function PlayerSeatCard({
           <Badge variant={player.ready ? 'success' : 'warning'}>
             {player.ready ? 'Ready' : 'Not ready'}
           </Badge>
-          <Badge>{player.connected ? 'Online' : 'Offline'}</Badge>
+          <Badge variant={online ? 'success' : 'warning'} dot>
+            {online ? 'Online' : 'Offline'}
+          </Badge>
         </div>
       ) : (
         <p className="text-sm text-[var(--text-muted)]">
@@ -195,4 +271,24 @@ function PlayerSeatCard({
 
 function formatSeat(seat: RoomPlayer['seat']) {
   return seat === 'player_1' ? 'Player 1' : 'Player 2';
+}
+
+function formatRealtimeStatus(status: string) {
+  if (status === 'subscribed') {
+    return 'online';
+  }
+
+  if (status === 'channel_error') {
+    return 'error';
+  }
+
+  if (status === 'timed_out') {
+    return 'timeout';
+  }
+
+  if (status === 'closed') {
+    return 'closed';
+  }
+
+  return 'connecting';
 }

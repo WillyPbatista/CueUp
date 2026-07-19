@@ -50,6 +50,26 @@ export interface RoomPlayer {
   joinedAt: string;
 }
 
+export interface RoomReadyStatus {
+  playerCount: number;
+  readyCount: number;
+  allReady: boolean;
+  players: Array<{
+    userId: string;
+    username: string;
+    seat: RoomPlayer['seat'];
+    ready: boolean;
+  }>;
+}
+
+export interface RoomPresencePlayer {
+  userId: string;
+  onlineAt: string;
+}
+
+export type RealtimeConnectionStatus =
+  'connecting' | 'subscribed' | 'timed_out' | 'closed' | 'channel_error';
+
 export async function listWaitingRooms() {
   const { data, error } = await supabase
     .from('rooms')
@@ -146,9 +166,19 @@ export async function getRoomPlayers(roomId: string) {
   return data.map(mapRoomPlayer);
 }
 
+export async function getRoomPlayerReadyStatus(roomId: string) {
+  const players = await getRoomPlayers(roomId);
+
+  return mapRoomReadyStatus(players);
+}
+
+// Alias temporal para no romper llamadas mientras corregimos el typo.
+export const getRoomplayerReadySatus = getRoomPlayerReadyStatus;
+
 export function subscribeToRoomPlayers(
   roomId: string,
-  onChange: () => void
+  onChange: () => void,
+  onStatusChange?: (status: RealtimeConnectionStatus) => void
 ): RealtimeChannel {
   return supabase
     .channel(`room:${roomId}:players`)
@@ -162,7 +192,44 @@ export function subscribeToRoomPlayers(
       },
       onChange
     )
-    .subscribe();
+    .subscribe((status) => {
+      onStatusChange?.(mapRealtimeStatus(status));
+    });
+}
+
+export function subscribeToRoomPresence(
+  roomId: string,
+  userId: string,
+  onSync: (players: RoomPresencePlayer[]) => void,
+  onStatusChange?: (status: RealtimeConnectionStatus) => void
+): RealtimeChannel {
+  const channel = supabase
+    .channel(`room:${roomId}:presence`, {
+      config: {
+        presence: {
+          key: userId,
+        },
+      },
+    })
+    .on('presence', { event: 'sync' }, () => {
+      const presenceState = channel.presenceState<RoomPresencePlayer>();
+      const players = Object.values(presenceState).flat();
+
+      onSync(players);
+    })
+    .subscribe(async (status) => {
+      const mappedStatus = mapRealtimeStatus(status);
+      onStatusChange?.(mappedStatus);
+
+      if (mappedStatus === 'subscribed') {
+        await channel.track({
+          onlineAt: new Date().toISOString(),
+          userId,
+        });
+      }
+    });
+
+  return channel;
 }
 
 export async function enterRoom(roomId: string, userId: string) {
@@ -232,6 +299,22 @@ export async function setRoomPlayerReady(
   }
 }
 
+export async function setRoomPlayerConnected(
+  roomId: string,
+  userId: string,
+  connected: boolean
+) {
+  const { error } = await supabase
+    .from('room_players')
+    .update({ connected })
+    .eq('room_id', roomId)
+    .eq('user_id', userId);
+
+  if (error) {
+    throw error;
+  }
+}
+
 export function normalizeRoomCode(code: string) {
   return code.trim().replace(/\s+/g, '-').toUpperCase();
 }
@@ -263,4 +346,40 @@ function mapRoomPlayer(row: RoomPlayerRow): RoomPlayer {
     connected: row.connected,
     joinedAt: row.joined_at,
   };
+}
+
+function mapRoomReadyStatus(players: RoomPlayer[]): RoomReadyStatus {
+  const readyCount = players.filter((player) => player.ready).length;
+
+  return {
+    allReady: players.length === 2 && readyCount === 2,
+    playerCount: players.length,
+    readyCount,
+    players: players.map((player) => ({
+      ready: player.ready,
+      seat: player.seat,
+      userId: player.userId,
+      username: player.username,
+    })),
+  };
+}
+
+function mapRealtimeStatus(status: string): RealtimeConnectionStatus {
+  if (status === 'SUBSCRIBED') {
+    return 'subscribed';
+  }
+
+  if (status === 'TIMED_OUT') {
+    return 'timed_out';
+  }
+
+  if (status === 'CLOSED') {
+    return 'closed';
+  }
+
+  if (status === 'CHANNEL_ERROR') {
+    return 'channel_error';
+  }
+
+  return 'connecting';
 }

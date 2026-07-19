@@ -150,18 +150,21 @@ Ya esta hecho:
 - Tailwind configurado.
 - ESLint, Prettier, Husky y lint-staged presentes.
 - Carpetas base de arquitectura creadas.
-- Pantalla inicial minima en `src/App.tsx`.
-- Documentacion inicial.
+- Router con paginas principales.
+- Componentes UI base para botones, cards, badges, inputs y modal.
+- Auth anonima minima con perfil de jugador.
+- Cliente Supabase y migraciones iniciales.
+- Lobby realtime con creacion y union a salas.
+- `RoomPage` con jugadores, ready state y presencia online/offline.
+- Publicacion realtime para `rooms` y `room_players`.
+- Documentacion de arquitectura, base de datos, tareas y notas.
 
 Falta:
 
-- Router real.
-- Componentes UI base.
-- Paginas principales.
-- Supabase client y variables de entorno.
-- Modelo de datos.
+- Aplicar/confirmar migraciones en el proyecto remoto de Supabase.
+- Crear match desde sala lista.
 - Integracion Phaser.
-- Lobby multiplayer.
+- Manejo robusto de desconexion y reconexion.
 - Motor de billar.
 - Reglas de juego.
 - Tests.

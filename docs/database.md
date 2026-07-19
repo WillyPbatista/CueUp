@@ -76,8 +76,14 @@ Snapshots opcionales para reconstruir partidas o reconectar jugadores.
 Canales previstos:
 
 - `rooms`: crear, listar y actualizar salas disponibles.
-- `room:{roomId}`: presencia, ready state y cambios previos a partida.
+- `room:{roomId}:players`: cambios Postgres de `room_players`, incluyendo entrada, salida, ready y connected persistido.
+- `room:{roomId}:presence`: presencia viva por sala para pintar online/offline entre pestanas.
 - `match:{matchId}`: eventos de juego, turnos y snapshots.
+
+Tablas publicadas en `supabase_realtime`:
+
+- `rooms`.
+- `room_players`.
 
 ## RLS pendiente
 
@@ -94,6 +100,7 @@ Politicas a definir:
 - Aplicar la migracion en el proyecto remoto de Supabase.
 - Probar RLS con usuarios reales.
 - Documentar variables de entorno.
+- Crear la transicion `rooms.status = playing` + `matches`.
 
 ## Migracion inicial
 
@@ -101,6 +108,7 @@ Archivo:
 
 ```txt
 supabase/migrations/202607040001_initial_multiplayer_schema.sql
+supabase/migrations/202607190001_enable_lobby_realtime.sql
 ```
 
 La migracion crea:

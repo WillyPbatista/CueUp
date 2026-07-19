@@ -13,9 +13,9 @@ Esta carpeta convierte el roadmap de CueUp en una guia de trabajo. Cada archivo 
 
 ## Estado
 
-Estamos terminando el Modulo 1 y entrando en el Modulo 2.
+Estamos cerrando el Modulo 6 con lobby realtime, ready state y presencia online/offline.
 
-Siguiente tarea recomendada: [02.01-react-components.md](02.01-react-components.md).
+Siguiente tarea recomendada: [06.02-start-match-from-room.md](06.02-start-match-from-room.md).
 
 ## Indice
 
@@ -31,6 +31,7 @@ Siguiente tarea recomendada: [02.01-react-components.md](02.01-react-components.
 - [05.01-supabase-setup.md](05.01-supabase-setup.md)
 - [05.02-database-design.md](05.02-database-design.md)
 - [06.01-realtime-lobby.md](06.01-realtime-lobby.md)
+- [06.02-start-match-from-room.md](06.02-start-match-from-room.md)
 - [07.01-phaser-introduction.md](07.01-phaser-introduction.md)
 - [08.01-pool-engine.md](08.01-pool-engine.md)
 - [09.01-game-rules.md](09.01-game-rules.md)

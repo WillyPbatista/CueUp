@@ -212,3 +212,30 @@ Este archivo es la bitacora del proyecto. Cada tarea debe dejar una nota corta c
 ### Siguiente duda
 
 - Que debe ocurrir cuando ambos jugadores estan ready: crear `matches`, cambiar `rooms.status` a `playing` y navegar a `/game/:matchId`.
+
+## 2026-07-19 - Ready status realtime en RoomPage
+
+### Aprendi
+
+- `getRoomPlayerReadyStatus(roomId)` lee un snapshot del estado actual de ready en una sala.
+- `subscribeToRoomPlayers(roomId, onChange)` escucha cambios futuros en `room_players` filtrados por esa sala.
+- Para que otra pestana vea el cambio de ready, el flujo es: update en BBDD, evento realtime, reload de jugadores, render nuevo.
+- La columna `connected` se puede actualizar al montar/desmontar `RoomPage` para mostrar si el jugador esta online dentro de esa sala.
+- El canal de una sala debe incluir el `roomId` en el nombre y en el filtro para no reaccionar a cambios de otras salas.
+- Para recibir Postgres Changes, la tabla debe estar en la publicacion `supabase_realtime`; si no, la app puede leer/escribir pero no recibe eventos en vivo.
+- `replica identity full` ayuda a que los eventos realtime incluyan suficiente informacion, especialmente para deletes o filtros sobre cambios.
+- Presence sirve para saber que clientes estan conectados ahora mismo; es mejor que depender de un cleanup de React cuando alguien cierra la pestana.
+
+### Decisiones
+
+- El service mantiene la lectura (`getRoomPlayerReadyStatus`) separada de la suscripcion (`subscribeToRoomPlayers`).
+- `useLobby` expone `roomReadyStatus` para que la UI no tenga que calcular todo a mano.
+- `RoomPage` marca al jugador como conectado cuando entra a la pagina y como desconectado al salir.
+- Se dejo un alias temporal `getRoomplayerReadySatus` apuntando al nombre correcto para no romper referencias mientras se corrige el typo.
+- Se agrego una migracion para publicar `rooms` y `room_players` en Supabase Realtime.
+- `RoomPage` muestra el estado del canal realtime para diagnosticar si la suscripcion esta activa.
+- `RoomPage` usa un canal Presence por sala para pintar `Online/Offline` en vivo.
+
+### Siguiente duda
+
+- Decidir si `connected` debe quedarse como estado persistido o si basta con Presence y una columna `last_seen_at`.

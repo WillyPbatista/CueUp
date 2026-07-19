@@ -2,14 +2,20 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   createRoom,
   enterRoom,
+  getRoomPlayerReadyStatus,
   getRoomPlayers,
   leaveRoom,
   listWaitingRooms,
+  setRoomPlayerConnected,
   setRoomPlayerReady,
+  subscribeToRoomPresence,
   subscribeToRoomPlayers,
   subscribeToRooms,
   type LobbyRoom,
+  type RealtimeConnectionStatus,
+  type RoomPresencePlayer,
   type RoomPlayer,
+  type RoomReadyStatus,
 } from '../services/lobbyServices';
 
 export function useLobby() {
@@ -21,6 +27,15 @@ export function useLobby() {
   const [roomPlayers, setRoomPlayers] = useState<RoomPlayer[]>([]);
   const [roomPlayersLoading, setRoomPlayersLoading] = useState(false);
   const [roomPlayersError, setRoomPlayersError] = useState<string | null>(null);
+  const [roomReadyStatus, setRoomReadyStatus] =
+    useState<RoomReadyStatus | null>(null);
+  const [roomPlayersRealtimeStatus, setRoomPlayersRealtimeStatus] =
+    useState<RealtimeConnectionStatus>('connecting');
+  const [roomPresencePlayers, setRoomPresencePlayers] = useState<
+    RoomPresencePlayer[]
+  >([]);
+  const [roomPresenceStatus, setRoomPresenceStatus] =
+    useState<RealtimeConnectionStatus>('connecting');
   const [leavingRoom, setLeavingRoom] = useState(false);
   const [updatingReady, setUpdatingReady] = useState(false);
 
@@ -115,8 +130,13 @@ export function useLobby() {
     setRoomPlayersError(null);
 
     try {
-      const players = await getRoomPlayers(roomId);
+      const [players, readyStatus] = await Promise.all([
+        getRoomPlayers(roomId),
+        getRoomPlayerReadyStatus(roomId),
+      ]);
+
       setRoomPlayers(players);
+      setRoomReadyStatus(readyStatus);
     } catch (error) {
       setRoomPlayersError(getLobbyErrorMessage(error));
     } finally {
@@ -124,13 +144,43 @@ export function useLobby() {
     }
   }, []);
 
+  const loadRoomReadyStatus = useCallback(async (roomId: string) => {
+    try {
+      const readyStatus = await getRoomPlayerReadyStatus(roomId);
+      setRoomReadyStatus(readyStatus);
+    } catch (error) {
+      setRoomPlayersError(getLobbyErrorMessage(error));
+    }
+  }, []);
+
   const subscribeToLobbyRoomPlayers = useCallback(
     (roomId: string) => {
-      return subscribeToRoomPlayers(roomId, () => {
-        loadRoomPlayers(roomId);
-      });
+      setRoomPlayersRealtimeStatus('connecting');
+
+      return subscribeToRoomPlayers(
+        roomId,
+        () => {
+          loadRoomPlayers(roomId);
+        },
+        setRoomPlayersRealtimeStatus
+      );
     },
     [loadRoomPlayers]
+  );
+
+  const subscribeToLobbyRoomPresence = useCallback(
+    (roomId: string, userId: string) => {
+      setRoomPresencePlayers([]);
+      setRoomPresenceStatus('connecting');
+
+      return subscribeToRoomPresence(
+        roomId,
+        userId,
+        setRoomPresencePlayers,
+        setRoomPresenceStatus
+      );
+    },
+    []
   );
 
   const backToLobby = useCallback(
@@ -171,6 +221,17 @@ export function useLobby() {
     [loadRoomPlayers]
   );
 
+  const setCurrentPlayerConnected = useCallback(
+    async (roomId: string, userId: string, connected: boolean) => {
+      try {
+        await setRoomPlayerConnected(roomId, userId, connected);
+      } catch (error) {
+        setRoomPlayersError(getLobbyErrorMessage(error));
+      }
+    },
+    []
+  );
+
   return {
     backToLobby,
     createLobbyRoom,
@@ -181,12 +242,19 @@ export function useLobby() {
     leavingRoom,
     loading,
     loadRoomPlayers,
+    loadRoomReadyStatus,
     refreshRooms,
     roomPlayers,
     roomPlayersError,
     roomPlayersLoading,
+    roomPlayersRealtimeStatus,
+    roomPresencePlayers,
+    roomPresenceStatus,
+    roomReadyStatus,
     rooms,
+    setCurrentPlayerConnected,
     setCurrentPlayerReady,
+    subscribeToLobbyRoomPresence,
     subscribeToLobbyRoomPlayers,
     updatingReady,
   };
